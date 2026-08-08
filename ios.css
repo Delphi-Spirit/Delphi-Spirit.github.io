@@ -1,0 +1,86 @@
+/* Safari and installed-to-home-screen refinements */
+html {
+  min-height: 100%;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+  background: #102a43;
+}
+
+body {
+  min-height: 100vh;
+  min-height: 100dvh;
+  padding-bottom: env(safe-area-inset-bottom);
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-y: none;
+}
+
+.topbar {
+  padding-top: max(20px, env(safe-area-inset-top));
+  padding-left: max(clamp(20px, 5vw, 72px), env(safe-area-inset-left));
+  padding-right: max(clamp(20px, 5vw, 72px), env(safe-area-inset-right));
+}
+
+button, .floor-tag, select {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+input, select, button {
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+select {
+  background-image: linear-gradient(45deg, transparent 50%, #486581 50%), linear-gradient(135deg, #486581 50%, transparent 50%);
+  background-position: calc(100% - 17px) 19px, calc(100% - 12px) 19px;
+  background-size: 5px 5px, 5px 5px;
+  background-repeat: no-repeat;
+  padding-right: 34px !important;
+}
+
+dialog {
+  max-height: calc(100dvh - max(28px, env(safe-area-inset-top)) - max(28px, env(safe-area-inset-bottom)));
+  overflow: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+dialog form {
+  padding-bottom: max(25px, env(safe-area-inset-bottom));
+}
+
+@media (max-width: 700px) {
+  input, select, .tag-search input, .purpose-editor input {
+    font-size: 16px !important;
+  }
+
+  .topbar {
+    padding-top: max(16px, env(safe-area-inset-top));
+    padding-left: max(18px, env(safe-area-inset-left));
+    padding-right: max(18px, env(safe-area-inset-right));
+  }
+
+  main {
+    width: auto;
+    margin-left: max(10px, env(safe-area-inset-left));
+    margin-right: max(10px, env(safe-area-inset-right));
+  }
+
+  .btn, .filter, .icon-btn, .floor-tag, .search-chip {
+    min-height: 44px;
+  }
+
+  dialog {
+    width: calc(100% - 20px);
+    max-height: calc(100dvh - max(20px, env(safe-area-inset-top)) - max(20px, env(safe-area-inset-bottom)));
+  }
+
+  dialog form {
+    padding: 20px;
+    padding-bottom: max(20px, env(safe-area-inset-bottom));
+  }
+}
+
+@supports (-webkit-touch-callout: none) {
+  .key-card:hover { transform: none; }
+  .tag-search { overflow: visible; }
+}
