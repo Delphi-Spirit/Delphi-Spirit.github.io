@@ -5,6 +5,7 @@ const OLD_STORAGE_KEYS=["hkstp-key-desk-v3","hkstp-key-desk-v2","hkstp-key-desk-
 const FLOOR_TAGS=["通匙","B/F","G/F","1/F","2/F","3/F","4/F","5/F","6/F","R/F"],norm=v=>String(v??"").toLocaleLowerCase("zh-HK").replace(/\s+/g,"");
 const FLOOR_SEARCH_TAGS=new Set(FLOOR_TAGS.filter(x=>x!=="通匙").map(norm)),colorMap={黑色:"#252b31",粉紅色:"#ee78a6",黃色:"#f1c62f",藍色:"#3488d1",紅色:"#e14b4b",綠色:"#27a86d",無:"#d7e1e6",其他:"#9b72cf"};
 const el=id=>document.getElementById(id);let keys=[],activeFilter="all",searchTags=[],purposeTags=[],currentUserId=null,realtimeChannel=null;
+document.head.insertAdjacentHTML("beforeend","<style>[hidden]{display:none!important}</style>");
 const grid=el("keyGrid"),template=el("keyCardTemplate"),dialog=el("keyDialog"),form=el("keyForm");
 
 function setAuthMessage(message,success=false){const node=el("authMessage");node.textContent=message;node.classList.toggle("success",success)}
