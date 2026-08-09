@@ -10,15 +10,24 @@ const grid=el("keyGrid"),template=el("keyCardTemplate"),dialog=el("keyDialog"),f
 function setAuthMessage(message,success=false){const node=el("authMessage");node.textContent=message;node.classList.toggle("success",success)}
 function setSync(message,state=""){el("syncStatus").textContent=message;el("syncStatus").parentElement.className=`sync-bar ${state}`.trim()}
 function setBusy(busy){document.body.classList.toggle("is-busy",busy)}
+function withTimeout(promise,ms,message){return Promise.race([promise,new Promise((_,reject)=>setTimeout(()=>reject(new Error(message)),ms))])}
 
 async function handleSession(session){
   if(!session){currentUserId=null;el("authScreen").hidden=false;el("appShell").hidden=true;return}
   if(currentUserId===session.user.id)return;
   setBusy(true);
-  const {data:allowed,error}=await db.rpc("is_allowed_user");
-  if(error||!allowed){await db.auth.signOut();setAuthMessage("此電郵帳戶未獲批准使用本系統。請聯絡管理員。");setBusy(false);return}
-  currentUserId=session.user.id;el("userEmail").textContent=session.user.email;el("authScreen").hidden=true;el("appShell").hidden=false;
-  await loadCloudKeys(true);subscribeToChanges();setBusy(false);
+  try{
+    setAuthMessage("正在驗證帳戶…",true);
+    const {data:allowed,error}=await withTimeout(db.rpc("is_allowed_user"),12000,"連線逾時，請檢查網絡後再試。");
+    if(error)throw error;
+    if(!allowed){await db.auth.signOut();setAuthMessage("此電郵帳戶未獲批准使用本系統。請聯絡管理員。");return}
+    currentUserId=session.user.id;el("userEmail").textContent=session.user.email;el("authScreen").hidden=true;el("appShell").hidden=false;
+    await withTimeout(loadCloudKeys(true),15000,"讀取鎖匙資料逾時，請重新整理頁面。");
+    subscribeToChanges();setAuthMessage("");
+  }catch(error){
+    currentUserId=null;el("authScreen").hidden=false;el("appShell").hidden=true;
+    setAuthMessage(`登入未完成：${error?.message||"未知錯誤"}`);
+  }finally{setBusy(false)}
 }
 
 async function loadCloudKeys(allowMigration=false){
@@ -52,7 +61,7 @@ function confirmDelete(k){const d=el("confirmDialog");el("confirmText").textCont
 
 form.addEventListener("submit",async e=>{e.preventDefault();if(el("purposeInput").value.trim())addPurposeTag();if(!form.reportValidity())return;const floors=selectedFloors();if(!purposeTags.length){el("purposeError").hidden=false;return}if(!floors.length){el("floorError").hidden=false;return}const id=el("keyId").value,record={color:el("tagColor").value,number:el("keyNumber").value.trim(),purposes:[...purposeTags],building:el("building").value,block:el("block").value,floors,borrowed:keys.find(k=>k.id===id)?.borrowed||false};el("saveKeyBtn").disabled=true;const query=id?db.from("keys").update(record).eq("id",id):db.from("keys").insert(record);const {error}=await query;el("saveKeyBtn").disabled=false;if(error){el("saveError").textContent=`儲存失敗：${error.message}`;el("saveError").hidden=false;return}closeForm();await loadCloudKeys(false)});
 
-el("authForm").addEventListener("submit",async e=>{e.preventDefault();setAuthMessage("正在登入…",true);const {error}=await db.auth.signInWithPassword({email:el("authEmail").value.trim(),password:el("authPassword").value});if(error)setAuthMessage(`登入失敗：${error.message}`)});
+el("authForm").addEventListener("submit",async e=>{e.preventDefault();setBusy(true);setAuthMessage("正在登入…",true);try{const {data,error}=await withTimeout(db.auth.signInWithPassword({email:el("authEmail").value.trim(),password:el("authPassword").value}),12000,"連線逾時，請稍後再試。");if(error)throw error;if(!data.session)throw new Error("未能建立登入狀態，請再試一次。");await handleSession(data.session)}catch(error){setAuthMessage(`登入失敗：${error?.message||"未知錯誤"}`)}finally{setBusy(false)}});
 el("signUpBtn").onclick=async()=>{if(!el("authForm").reportValidity())return;setAuthMessage("正在建立帳戶…",true);const {data,error}=await db.auth.signUp({email:el("authEmail").value.trim(),password:el("authPassword").value,options:{emailRedirectTo:"https://delphi-spirit.github.io/"}});if(error){setAuthMessage(`建立失敗：${error.message}`);return}if(data.session)await handleSession(data.session);else setAuthMessage("帳戶已建立，請到電郵信箱確認後再登入。",true)};
 el("signOutBtn").onclick=()=>db.auth.signOut();el("addKeyBtn").onclick=()=>openForm();el("closeDialogBtn").onclick=closeForm;el("cancelBtn").onclick=closeForm;el("clearSearch").onclick=()=>{searchTags=[];render()};
 el("searchInput").addEventListener("keydown",e=>{if(e.key==="Enter"||e.key===","){e.preventDefault();addSearchTag()}else if(e.key==="Backspace"&&!e.currentTarget.value&&searchTags.length){searchTags.pop();render()}});el("purposeInput").addEventListener("keydown",e=>{if(e.key==="Enter"||e.key===","){e.preventDefault();addPurposeTag()}else if(e.key==="Backspace"&&!e.currentTarget.value&&purposeTags.length){purposeTags.pop();renderPurposeTags()}});el("purposeInput").addEventListener("blur",()=>{if(el("purposeInput").value.trim())addPurposeTag()});document.querySelectorAll(".filter").forEach(b=>b.onclick=()=>{activeFilter=b.dataset.filter;document.querySelectorAll(".filter").forEach(x=>x.classList.toggle("active",x===b));render()});
