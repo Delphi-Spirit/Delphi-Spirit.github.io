@@ -12,9 +12,13 @@ function setAuthMessage(message,success=false){const node=el("authMessage");node
 function setSync(message,state=""){el("syncStatus").textContent=message;el("syncStatus").parentElement.className=`sync-bar ${state}`.trim()}
 function setBusy(busy){document.body.classList.toggle("is-busy",busy)}
 function withTimeout(promise,ms,message){return Promise.race([promise,new Promise((_,reject)=>setTimeout(()=>reject(new Error(message)),ms))])}
+function isManageView(){return new URLSearchParams(location.search).get("view")==="manage"}
+function goToManage(){const url=new URL(location.href);url.search="?view=manage";url.hash="";location.replace(url)}
+function goToLogin(){const url=new URL(location.href);url.search="";url.hash="";location.replace(url)}
 
 async function handleSession(session){
-  if(!session){currentUserId=null;el("authScreen").hidden=false;el("appShell").hidden=true;return}
+  if(!session){currentUserId=null;if(isManageView()){goToLogin();return}el("authScreen").hidden=false;el("authScreen").style.display="";el("appShell").hidden=true;return}
+  if(!isManageView()){goToManage();return}
   if(currentUserId===session.user.id)return;
   setBusy(true);
   try{
@@ -22,7 +26,7 @@ async function handleSession(session){
     const {data:allowed,error}=await withTimeout(db.rpc("is_allowed_user"),12000,"連線逾時，請檢查網絡後再試。");
     if(error)throw error;
     if(!allowed){await db.auth.signOut();setAuthMessage("此電郵帳戶未獲批准使用本系統。請聯絡管理員。");return}
-    currentUserId=session.user.id;el("userEmail").textContent=session.user.email;el("authScreen").hidden=true;el("appShell").hidden=false;
+    currentUserId=session.user.id;el("userEmail").textContent=session.user.email;el("authScreen").hidden=true;el("authScreen").style.display="none";el("appShell").hidden=false;
     await withTimeout(loadCloudKeys(true),15000,"讀取鎖匙資料逾時，請重新整理頁面。");
     subscribeToChanges();setAuthMessage("");
   }catch(error){
@@ -64,8 +68,8 @@ form.addEventListener("submit",async e=>{e.preventDefault();if(el("purposeInput"
 
 el("authForm").addEventListener("submit",async e=>{e.preventDefault();setBusy(true);setAuthMessage("正在登入…",true);try{const {data,error}=await withTimeout(db.auth.signInWithPassword({email:el("authEmail").value.trim(),password:el("authPassword").value}),12000,"連線逾時，請稍後再試。");if(error)throw error;if(!data.session)throw new Error("未能建立登入狀態，請再試一次。");await handleSession(data.session)}catch(error){setAuthMessage(`登入失敗：${error?.message||"未知錯誤"}`)}finally{setBusy(false)}});
 el("signUpBtn").onclick=async()=>{if(!el("authForm").reportValidity())return;setAuthMessage("正在建立帳戶…",true);const {data,error}=await db.auth.signUp({email:el("authEmail").value.trim(),password:el("authPassword").value,options:{emailRedirectTo:"https://delphi-spirit.github.io/"}});if(error){setAuthMessage(`建立失敗：${error.message}`);return}if(data.session)await handleSession(data.session);else setAuthMessage("帳戶已建立，請到電郵信箱確認後再登入。",true)};
-el("signOutBtn").onclick=()=>db.auth.signOut();el("addKeyBtn").onclick=()=>openForm();el("closeDialogBtn").onclick=closeForm;el("cancelBtn").onclick=closeForm;el("clearSearch").onclick=()=>{searchTags=[];render()};
+el("signOutBtn").onclick=async()=>{await db.auth.signOut();goToLogin()};el("addKeyBtn").onclick=()=>openForm();el("closeDialogBtn").onclick=closeForm;el("cancelBtn").onclick=closeForm;el("clearSearch").onclick=()=>{searchTags=[];render()};
 el("searchInput").addEventListener("keydown",e=>{if(e.key==="Enter"||e.key===","){e.preventDefault();addSearchTag()}else if(e.key==="Backspace"&&!e.currentTarget.value&&searchTags.length){searchTags.pop();render()}});el("purposeInput").addEventListener("keydown",e=>{if(e.key==="Enter"||e.key===","){e.preventDefault();addPurposeTag()}else if(e.key==="Backspace"&&!e.currentTarget.value&&purposeTags.length){purposeTags.pop();renderPurposeTags()}});el("purposeInput").addEventListener("blur",()=>{if(el("purposeInput").value.trim())addPurposeTag()});document.querySelectorAll(".filter").forEach(b=>b.onclick=()=>{activeFilter=b.dataset.filter;document.querySelectorAll(".filter").forEach(x=>x.classList.toggle("active",x===b));render()});
 
-db.auth.onAuthStateChange((event,session)=>{if(event==="SIGNED_OUT"){currentUserId=null;el("authScreen").hidden=false;el("appShell").hidden=true}else if(session)setTimeout(()=>handleSession(session),0)});
+db.auth.onAuthStateChange((event,session)=>{if(event==="SIGNED_OUT"){currentUserId=null;el("appShell").hidden=true;if(isManageView())goToLogin();else{el("authScreen").hidden=false;el("authScreen").style.display=""}}else if(session)setTimeout(()=>handleSession(session),0)});
 db.auth.getSession().then(({data})=>handleSession(data.session));
