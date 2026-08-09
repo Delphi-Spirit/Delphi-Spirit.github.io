@@ -7,9 +7,9 @@ const FLOOR_SEARCH_TAGS=new Set(FLOOR_TAGS.filter(x=>x!=="通匙").map(norm)),co
 const el=id=>document.getElementById(id);let keys=[],activeFilter="all",searchTags=[],purposeTags=[],currentUserId=null,realtimeChannel=null;
 document.head.insertAdjacentHTML("beforeend","<style>[hidden]{display:none!important}</style>");
 document.head.insertAdjacentHTML("beforeend","<style>.form-grid textarea{min-height:86px;resize:vertical;border:1px solid #bcccdc;border-radius:8px;padding:10px 11px;background:#fff;font:inherit}.notes-text{white-space:pre-wrap;overflow-wrap:anywhere;color:#486581;font-weight:500!important}</style>");
+const grid=el("keyGrid"),template=el("keyCardTemplate"),dialog=el("keyDialog"),form=el("keyForm");
 el("floorOptions").closest("fieldset").insertAdjacentHTML("beforebegin",'<label class="wide">備注（選填）<textarea id="keyNotes" maxlength="500" placeholder="可留空"></textarea></label>');
 template.content.querySelector("dl").insertAdjacentHTML("beforeend",'<div class="notes-row" hidden><dt>備注</dt><dd class="notes-text"></dd></div>');
-const grid=el("keyGrid"),template=el("keyCardTemplate"),dialog=el("keyDialog"),form=el("keyForm");
 
 function setAuthMessage(message,success=false){const node=el("authMessage");node.textContent=message;node.classList.toggle("success",success)}
 function setSync(message,state=""){el("syncStatus").textContent=message;el("syncStatus").parentElement.className=`sync-bar ${state}`.trim()}
